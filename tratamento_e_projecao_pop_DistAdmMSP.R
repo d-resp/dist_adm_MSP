@@ -186,31 +186,31 @@ df_munESP %>%
 #   labs(title="Ano: 2024") +
 #   theme_minimal()
 ####
-teste <- df_mun %>% 
-  filter(NM_MUN!="São Paulo") %>% 
-  select(CD_MUN,NM_MUN,geometry)
-if (st_crs(teste) != st_crs(df_map)) {
-  teste <- st_transform(teste, st_crs(df_map))
-}
-
-
-teste <- rbind(teste,df_map)
-
-teste %>% ggplot() + geom_sf()
-
-
-
-oname <- load("shp_mun.RData")
-df_mun <- get(oname)
-l_p <- list()
-l_p$from_mun <- df_mun %>% 
-  filter(NM_MUN=="São Paulo") %>% 
-  ggplot() +
-  geom_sf()
-l_p$from_distadm <- df_map %>% 
-  ggplot() +
-  geom_sf()
-gridExtra::grid.arrange(grobs=l_p,ncol=2)
+# teste <- df_mun %>% 
+#   filter(NM_MUN!="São Paulo") %>% 
+#   select(CD_MUN,NM_MUN,geometry)
+# if (st_crs(teste) != st_crs(df_map)) {
+#   teste <- st_transform(teste, st_crs(df_map))
+# }
+# 
+# 
+# teste <- rbind(teste,df_map)
+# 
+# teste %>% ggplot() + geom_sf()
+# 
+# 
+# 
+# oname <- load("shp_mun.RData")
+# df_mun <- get(oname)
+# l_p <- list()
+# l_p$from_mun <- df_mun %>% 
+#   filter(NM_MUN=="São Paulo") %>% 
+#   ggplot() +
+#   geom_sf()
+# l_p$from_distadm <- df_map %>% 
+#   ggplot() +
+#   geom_sf()
+# gridExtra::grid.arrange(grobs=l_p,ncol=2)
 # 
 # 
 # 

@@ -47,11 +47,12 @@ f_gam <- \(dfi){
 df_fxet <- ddply(df_pop,c("dist_admMSP","fxet"),f_gam) 
 write_csv(df_fxet,
           file="G:/CCD/CVE/RESPIRATORIAS/11_MAPAS/MSP_dist_adm/df_pop_fxet_1996-2024.csv")
+df_fxet <- read_csv("G:/CCD/CVE/RESPIRATORIAS/11_MAPAS/MSP_dist_adm/df_pop_fxet_1996-2024.csv")
 ######## aud ########
-# df_total <- ddply(df_pop %>%
-#                     group_by(dist_admMSP,ano) %>%
-#                     summarise(pop = sum(pop)),
-#                   "dist_admMSP",f_gam)
+df_total <- ddply(df_pop %>%
+                    group_by(dist_admMSP,ano) %>%
+                    summarise(pop = sum(pop)),
+                  "dist_admMSP",f_gam)
 f_gsub <- \(vstring){
   vstring %>% 
     gsub("Ç",'C',.) %>% 
@@ -159,7 +160,10 @@ sf_pop_ESP_distMSP <- left_join(
   by=c("NM_MUN","NM_DIST"))
 saveRDS(sf_pop_ESP_distMSP,
         file="G:/CCD/CVE/RESPIRATORIAS/11_MAPAS/MSP_dist_adm/sf_pop_ESP_distMSP_2000-2024.rds")
-teste %>% 
+sf_pop_ESP_distMSP <- readRDS("G:/CCD/CVE/RESPIRATORIAS/11_MAPAS/MSP_dist_adm/sf_pop_ESP_distMSP_2000-2024.rds")
+
+sf_pop_ESP_distMSP %>% 
+  filter(NM_MUN=="SAO PAULO") %>% 
   ggplot(aes(fill=`2024`)) +
   geom_sf(linewidth=0.001)
 aud <- teste %>% select(starts_with("NM"),`2024`)

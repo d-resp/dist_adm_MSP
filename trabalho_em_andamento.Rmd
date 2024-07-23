@@ -1,0 +1,84 @@
+---
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+library(plyr)
+library(tidyverse)
+```
+
+
+# 22/07/2024
+Como descrever os dados de SP por distrito?
+
+
+
+```{r estudo das variaveis do SIVEP relacionadas com localização}
+oname <- load("G:/CCD/CVE/RESPIRATORIAS/01_SRAG/4_bases/boletim.Rdata")
+df_srag <- get(oname);rm(list=oname);gc()
+df_MSP <- df_srag %>% 
+  filter(ID_MN_RESI=="SAO PAULO")
+
+v_cols <- c("ID_REGIONA","CO_REGIONA","ID_MUNICIP","CO_MUN_NOT","ID_UNIDADE","CO_UNI_NOT",
+            "NU_CEP","ID_PAIS","CO_PAIS","SG_UF","ID_RG_RESI","CO_RG_RESI","ID_MN_RESI",
+            "CO_MUN_RES","NM_BAIRRO","NM_LOGRADO","NU_NUMERO","NM_COMPLEM","NU_DDD_TEL","NU_TELEFON",
+            "CS_ZONA","ESTRANG","POV_CT","TP_POV_CT","NU_CNS","HOSPITAL","DT_INTERNA","SG_UF_INTE",
+            "ID_RG_INTE","CO_RG_INTE","ID_MN_INTE","CO_MU_INTE","NM_UN_INTE","CO_UN_INTE")
+v_endereco <- c("NU_CEP","NM_BAIRRO","NM_LOGRADO","NU_NUMERO","ID_MN_RESI")
+df_aud <- df_MSP %>% select(all_of(v_endereco),"DT_SIN_PRI","classi")
+df_aud
+
+
+df_aud$NU_CEP %>% is.na() %>% sum() / length(df_aud$NU_CEP)
+df_aud$NU_CEP %>% is.na() %>% sum()
+
+df_srag %>% filter(classi!="SARS COV 2") %>% dim
+```
+
+
+
+```{r estudo do Rdata geocodificado pela Raquel}
+oname <- load("C:/Users/dpmori/Desktop/trabalho_em_andamento/Geo_covid_030724.Rdata")
+df_geocod <- get(oname);rm(list=oname);gc()
+df_geocod %>% filter(Geo=="ok") %>% dim
+
+
+v_cols <- c("NU_NOTIFIC","NU_CEP","Logradouro_Completo","Logradouro2","NM_LOGRADO","NU_NUMERO","ID_MN_RESI",
+            "Cep","Geo","x","y","zip",
+            "GEO2", "Tipo_log","Tipo_log2","Cep")
+df_aud <- df_geocod %>% select(all_of(v_cols)) %>% filter(Geo=="ok")
+```
+
+
+
+
+```{r}
+# Token de acesso: 0c19e6965ac3fea7d388b498e5b9bc40
+library(cepR)
+token <- "0c19e6965ac3fea7d388b498e5b9bc40"
+v_cep <- df_aud %>% filter(!is.na(NU_CEP)) %>% head(n=10)
+busca_cep(cep = "11920000",token = token)
+# nunca funciona
+```
+
+
+
+Como geocodificar?
+
+https://www.youtube.com/watch?v=vVuiBY2kMlA
+
+```{r}
+library(tibble)
+library(dplyr)
+library(tidygeocoder)
+# library(maptools)
+library(mapview)
+
+v_cep$Logradouro_Completo[4]
+geocode(address = v_cep$Logradouro_Completo[4])
+
+```
+
+

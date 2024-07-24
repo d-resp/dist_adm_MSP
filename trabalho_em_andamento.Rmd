@@ -13,12 +13,15 @@ library(tidyverse)
 # 24/07/2024
 
 A estratégia é:
-1) geocodificar os cnes de todos os hospitais de notificação do ano de 2022-2023 de SRAG
+1) geocodificar os cnes de todos os hospitais de notificação do ano de 2022-2023 de SRAG - FEITO
 2) contabilizar a proporção de sucesso
 3) contabilizar o erro fora do MSP
 
+## geocodificação dos endereços:
+a) obter as coordenadas pela api da plataforma HERE
+b) dos que não foi possível obter lat long pela plataforma HERE então eu pesquisei no google maps a coordenada 
 
-```{r}
+```{r filtro dos cnes de interesse}
 # 1) quais os cnes dos hospitais de notificação: remover casos duplicados
 oname <- load("G:/CCD/CVE/RESPIRATORIAS/01_SRAG/4_bases/boletim.Rdata")
 df_srag <- get(oname);rm(list=oname);gc()
@@ -42,33 +45,77 @@ df_geocodMSP <- left_join(
   df_geocodMSP,
   df_refcnes
 ) %>% relocate(municipio,.after=last_col())
-df_togeocod <- df_geocodMSP %>% select(cnes,logradouro:municipio) %>% distinct() %>% 
-  mutate(endereco = paste())
 ```
-```{r}
+```{r geocodificacao per se}
 library(tidygeocoder)
 f_paste <- paste
 formals(f_paste)$sep=", "
+df_togeocod <- df_geocodMSP %>% select(cnes,logradouro:municipio) %>% distinct()
 df_togeocod$endereco = Reduce("f_paste",df_togeocod[,-1])
-df_cnes <- df_togeocod %>% 
-  geocode(address = endereco,method="osm")
-names(df_cnes)[grepl("lat|long",names(df_cnes))] <- sapply(1:2,\(x) paste0(c("lat","long"),x)) %>% as.vector()
-df_cnes <- as.data.frame(df_cnes)
-# df_cnes <- df_togeocod
-saveRDS(df_cnes,file="./resultados/df_cnes.rds",)
-```
-```{r}
+# df_cnes <- df_togeocod %>% 
+#   geocode(address = endereco,method="osm")
+# names(df_cnes)[grepl("lat|long",names(df_cnes))] <- sapply(1:2,\(x) paste0(c("lat","long"),x)) %>% as.vector()
+# df_cnes <- as.data.frame(df_cnes)
+# # df_cnes <- df_togeocod
+# saveRDS(df_cnes,file="./resultados/df_cnes.rds",)
+#
 # HERE_API_KEY = "satAmDy2WRSF25bYxXicCaM8olNeM8GB5YA15wAwAUM"
 Sys.setenv(HERE_API_KEY = "satAmDy2WRSF25bYxXicCaM8olNeM8GB5YA15wAwAUM")
-df_cnes <- readRDS(file="./resultados/df_cnes.rds")
-df_aud <- df_cnes %>% filter(if_any(matches("lat|long"),is.na)) %>% select(cnes,endereco,matches("lat|long"))
+# df_cnes <- readRDS(file="./resultados/df_cnes.rds")
+# df_aud <- df_cnes %>% filter(if_any(matches("lat|long"),is.na)) %>% select(cnes,endereco,matches("lat|long"))
 #
-df_aud <- df_aud %>% 
+df_aud <- df_togeocod %>% select(cnes,endereco) %>% 
   geocode(address = endereco, method="here")
-df_geocodHERE <- df_aud %>% select(cnes,endereco,lat,long) %>% as.data.frame()
+df_cnes_latlong <- df_aud %>% select(cnes,endereco,lat,long) %>% as.data.frame()
+#
+# df_cnes_latlong <- left_join(
+#   df_cnes,
+#   df_geocodHERE %>% select(-endereco),
+#   by="cnes"
+# ) %>% mutate(
+#   lat = ifelse(is.na(lat),lat1,lat),
+#   long = ifelse(is.na(long),long1,long)
+# ) %>% select(-matches("1|2")) %>% select(cnes,endereco:long)
+saveRDS(df_cnes_latlong,file="./resultados/df_cnes_latlong.rds")
+```
+```{r preenchimento dos lat long q nao estavam na plataforma here}
+df_cnes_latlong <- readRDS(df_cnes_latlong,file="./resultados/df_cnes_latlong.rds")
+df_aud <- df_cnes_latlong %>% filter(grepl("NA, NA",endereco)|is.na(lat)|is.na(long)) %>% mutate(lat_long_gmaps=NA)
+for(i in 1:nrow(df_aud)){
+  gmaps_coords <- readline(prompt = paste("lat, long do cnes", df_aud[i,"cnes"], ": "))
+  df_aud$lat_long_gmaps[i] <- gmaps_coords
+}
+df_aud <- df_aud %>%
+  select(-lat,-long) %>% 
+  separate(lat_long_gmaps, into = c("lat", "long"), sep = ", ")
+df_final <- rbind(
+  df_cnes_latlong %>% filter(!cnes%in%df_aud$cnes) %>% mutate(method="here"),
+  df_aud %>% mutate(method="gmaps")
+)
+df_cnes_latlong <- df_final
+saveRDS(df_cnes_latlong,file="./resultados/df_cnes_latlong.rds")
+```
+```{r geocode reverso para avaliar se existe o lugar}
+# validação 
+df_aud <- adply(df_cnes_latlong,1,\(dfi){
+  reverse_geocode(dfi,lat=lat,long=long,method="here")
+})
+teste <- df_aud %>% 
+  mutate(endereco = case_when(
+    grepl("NA, NA",endereco) ~ address,
+    TRUE ~ endereco
+  )) %>% select(-address)
 ```
 
-API_KEY_HERE = satAmDy2WRSF25bYxXicCaM8olNeM8GB5YA15wAwAUM
+## Em qual grande área do MSP os hospitais notificantes estão?
+
+```{r}
+
+```
+
+
+
+
 
 
 # 22/07/2024

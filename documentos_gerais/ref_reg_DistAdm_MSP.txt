@@ -1,0 +1,6 @@
+regiao	distritos
+Centro	Bela Vista, Bom Retiro, Cambuci, Consolação, Liberdade, República, Santa Cecília, Sé
+Leste	Aricanduva, Carrão, Vila Formosa, Cidade Tiradentes, Ermelino Matarazzo, Ponte Rasa, Guaianases, Lajeado, Itaim Paulista, Vila Curuçá, Cidade Líder, Itaquera, José Bonifácio,Parque do Carmo, Água Rasa, Belém, Brás, Moóca, Pari,Tatuapé, Artur Alvim, Cangaíba, Penha, Vila Matilde, Iguatemi, São Mateus, São Rafael, Jardim Helena, São Miguel, Vila Jacuí, São Lucas, Sapopemba, Vila Prudente
+Norte	Cachoeirinha, Casa Verde, Limão, Brasilândia, Freguesia do Ó, Jaçanã, Tremembé, Anhanguera, Perus, Jaraguá, Pirituba, São Domingos, Mandaqui, Santana, Tucuruvi, Vila Guilherme, Vila Maria, Vila Medeiros
+Oeste	Butantã, Morumbi, Raposo Tavares, Rio Pequeno, Vila Sônia, Barra Funda, Jaguara, Jaguaré, Lapa, Perdizes, Vila Leopoldina, Alto de Pinheiros, Itaim Bibi, Jardim Paulista, Pinheiros
+Sul	Campo Limpo, Capão Redondo, Vila Andrade, Cidade Dutra, Grajaú, Socorro, Cidade Ademar, Pedreira, Cursino, Ipiranga, Sacomã, Jabaquara, Jardim Ângela, Jardim São Luís, Marsilac, Parelheiros, Campo Belo, Campo Grande, Santo Amaro, Moema, Saúde, Vila Mariana

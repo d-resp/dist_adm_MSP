@@ -7,6 +7,7 @@ editor_options:
 ```{r}
 library(plyr)
 library(tidyverse)
+source("./source/general_tools.R")
 ```
 
 
@@ -110,9 +111,78 @@ teste <- df_aud %>%
 ## Em qual grande área do MSP os hospitais notificantes estão?
 
 ```{r}
+# referência das regiões e distritos administrativos
+df_ref_regdist <- read_tsv(file="./documentos_gerais/ref_reg_DistAdm_MSP.txt",locale = locale(encoding = 'latin1'))
+df_ref_regdist <- ddply(df_ref_regdist,"regiao",\(dfi){
+  v_dist <- strsplit(dfi$distritos,split = ", ") %>% unlist() %>% strsplit(dfi$distritos,split = ",") %>% unlist()
+  data.frame(regiao=dfi$regiao[1],
+             dist_adm = v_dist)
+}) %>% mutate(dist_adm = f_casewhen(dist_adm) %>% 
+                gsub("CIDADE","CID",.) %>% 
+                gsub("JARDIM","JD",.))
+# shapefile com as informações de populacao
+sf_MSP <- readRDS("G:/CCD/CVE/RESPIRATORIAS/11_MAPAS/MSP_dist_adm/sf_pop_ESP_distMSP_2000-2024.rds") %>% 
+  filter(NM_MUN=="SAO PAULO") %>% select(NM_DIST)
+# setdiff
+v_ref <- df_ref_regdist$dist_adm
+v_sf <- sf_MSP$NM_DIST
+setdiff(v_ref,v_sf)
+sf_MSP <- inner_join(
+  sf_MSP,
+  df_ref_regdist,
+  by=c("NM_DIST"="dist_adm")
+)
+library(sf)
+sf_regioesMSP <- sf_MSP %>% 
+  mutate(geometry = st_make_valid(geometry)) %>% 
+  group_by(regiao) %>% 
+  # summarise(geometry = st_union(geometry)) %>% 
+  summarise(geometry = st_union(st_buffer(geometry, 0))) %>% 
+  sf::st_simplify(preserveTopology = TRUE)
+sf_regioesMSP %>% ggplot() + geom_sf()
+#
+v_crs <- sf::st_crs(sf_regioesMSP)
+df_cnes_latlong <- readRDS(df_cnes_latlong,file="./resultados/df_cnes_latlong.rds") %>% 
+  st_as_sf(.,coords = c("long", "lat"), crs = v_crs)
+
+
 
 ```
 
+```{r exemplo do chatgpt}
+# Example point data
+points <- st_as_sf(data.frame(
+  id = 1:5,
+  lon = c(-46.625290, -46.633309, -46.639448, -46.623253, -46.647838),
+  lat = c(-23.533773, -23.546379, -23.562914, -23.545625, -23.550520)
+), coords = c("lon", "lat"), crs = 4326)
+
+# Example polygon data
+polygon <- st_as_sf(data.frame(
+  id = 1,
+  geometry = st_sfc(st_polygon(list(matrix(c(
+    -46.650000, -23.540000,
+    -46.640000, -23.540000,
+    -46.640000, -23.550000,
+    -46.650000, -23.550000,
+    -46.650000, -23.540000
+  ), byrow = TRUE, ncol = 2))))
+), crs = 4326)
+
+# Check if points are within the polygon
+points_within <- st_within(points, polygon, sparse = FALSE)
+
+# Filter points that are inside the polygon
+points_inside <- points[points_within, ]
+
+# Plot the results
+ggplot() +
+  geom_sf(data = polygon, fill = "lightblue", alpha = 0.5) +
+  geom_sf(data = points, color = "red") +
+  geom_sf(data = points_inside, color = "green", size = 3) +
+  theme_minimal()
+
+```
 
 
 

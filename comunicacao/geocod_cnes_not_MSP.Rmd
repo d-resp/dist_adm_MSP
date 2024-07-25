@@ -163,7 +163,10 @@ grid.arrange(grobs=l_p,ncol=2,top="Comparação dos shapefiles com MSP e com reg
 - 4) preenchimento manual das coordenadas indisponíveis pelo method='here' usando o google maps
 
 ```{r coordenadas dos pontos geocodificados}
-v_crs <- st_crs(df_munESP_distMSP)
+st_crs(df_munESP_distMSP)$proj4string==st_crs(df_cnes_latlong)$proj4string
+
+v_crs <- st_crs(df_munESP_distMSP)$proj4string
+# st_crs(df_cnes_latlong)$proj4string
 df_cnes_latlong <- readRDS(file="../resultados/df_cnes_latlong.rds") %>% 
   st_as_sf(.,coords = c("long", "lat"), crs = v_crs)
 df_cnes_latlong %>% ggplot(aes(color=method)) + geom_sf() + theme_bw() + labs(title="st_as_sf(crs = st_crs(poligonos)") + 

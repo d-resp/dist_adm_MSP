@@ -141,12 +141,31 @@ sf_regioesMSP <- sf_MSP %>%
   sf::st_simplify(preserveTopology = TRUE)
 sf_regioesMSP %>% ggplot() + geom_sf()
 #
-v_crs <- sf::st_crs(sf_regioesMSP)
-df_cnes_latlong <- readRDS(df_cnes_latlong,file="./resultados/df_cnes_latlong.rds") %>% 
+# v_crs <- 
+
+df_cnes_latlong <- readRDS(file="./resultados/df_cnes_latlong.rds") %>% 
   st_as_sf(.,coords = c("long", "lat"), crs = v_crs)
+df_cnes_latlong <- st_transform(df_cnes_latlong, crs = 29193)
 
 
+sf::st_crs(sf_regioesMSP)
+sf::st_crs(df_cnes_latlong)
+df_cnes_latlong <- st_transform(df_cnes_latlong, crs = st_crs(sf_regioesMSP))
 
+#
+# Check which points are within which polygons
+points_in_polygons <- st_join(df_cnes_latlong, sf_regioesMSP, join = st_within)
+
+# Plot the results
+ggplot() +
+  geom_sf(data = df_cnes_latlong, color = "red") +
+  geom_sf(data = sf_regioesMSP, fill = "lightblue", alpha = 0.5) +
+  geom_sf(data = points_in_polygons, size = 3) +
+  theme_minimal() +
+  labs(color = "Polygon ID")
+#
+st_bbox(df_cnes_latlong)
+st_bbox(df_munESP_distMSP)
 ```
 
 ```{r exemplo do chatgpt}

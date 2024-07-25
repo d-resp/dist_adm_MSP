@@ -1,0 +1,194 @@
+---
+title: "Geocodificação e auditoria dos CNES de notificação de SRAG no MSP 2022 e 2023"
+author: "DVRESP, Danilo P. Mori"
+date: "2024-07-25"
+output: html_document
+---
+
+```{r setup, include=FALSE, warning=FALSE, message=FALSE,echo=FALSE}
+knitr::opts_chunk$set(echo = FALSE,warning=FALSE, message=FALSE)
+library(sf)
+library(gganimate)
+library(transformr)
+library(plyr)
+library(grid)
+library(gridExtra)
+library(tidyverse)
+library(mgcv)
+source("../source/general_tools.R")
+```
+
+# Shapefile dos Distritos Administrativos de MSP e dos outros municípios do ESP
+
+```{r fig 1 distritos administrativos, cap="Distritos administrativos do MSP (esquerda); e os poligonos dos distritos agregados em regioes (direita) "}
+##
+df_distMSP <- read_sf("../shp_files/LAYER_DISTRITO/DEINFO_DISTRITO.shp") %>% 
+  select(NOME_DIST) %>% 
+  mutate(NM_MUN="SAO PAULO") %>% 
+  relocate(NM_MUN) %>% 
+  rename(NM_DIST=NOME_DIST)
+v_crs <- st_crs(df_distMSP)
+###
+df_ref_regdist <- read_tsv(file="../documentos_gerais/ref_reg_DistAdm_MSP.txt",locale = locale(encoding = 'latin1'))
+df_ref_regdist <- ddply(df_ref_regdist,"regiao",\(dfi){
+  v_dist <- strsplit(dfi$distritos,split = ", ") %>% unlist() %>% strsplit(dfi$distritos,split = ",") %>% unlist()
+  data.frame(regiao=dfi$regiao[1],
+             dist_adm = v_dist)
+}) %>% mutate(dist_adm = f_casewhen(dist_adm) %>% 
+                gsub("CIDADE","CID",.) %>% 
+                gsub("JARDIM","JD",.))
+# shapefile com as informações de populacao
+sf_MSP <- readRDS("G:/CCD/CVE/RESPIRATORIAS/11_MAPAS/MSP_dist_adm/sf_pop_ESP_distMSP_2000-2024.rds") %>% 
+  filter(NM_MUN=="SAO PAULO") %>% select(NM_DIST)
+# setdiff
+v_ref <- df_ref_regdist$dist_adm
+v_sf <- sf_MSP$NM_DIST
+setdiff(v_ref,v_sf)
+sf_MSP <- inner_join(
+  sf_MSP,
+  df_ref_regdist,
+  by=c("NM_DIST"="dist_adm")
+)
+#########
+theme_set(theme_minimal())
+l_p <- list()
+l_p$`dist. adm.` <- df_distMSP %>% 
+  ggplot() + geom_sf() + labs(title="Distritos Administrativos")
+l_p$`regioes` <- sf_MSP %>% 
+  mutate(geometry = st_make_valid(geometry)) %>% 
+  group_by(regiao) %>% 
+  # summarise(geometry = st_union(geometry)) %>% 
+  summarise(geometry = st_union(st_buffer(geometry, 0))) %>% 
+  sf::st_simplify(preserveTopology = TRUE) %>% 
+  ggplot() + geom_sf() + labs(title="Regiões, sf::st_union")
+grid.arrange(grobs=l_p,ncol=2,top="SAD69 / UTM zone 23S")
+```
+  
+  
+### Fig 1: comparação da agregação dos distritos administrativos do MSP  
+  
+    
+
+```{r exemplo de codigo usado para juntar os shapefiles dos distritos do MSP,echo=TRUE,eval=FALSE}
+# exemplo do código usado para unir os shapefiles dos distritos do MSP
+sf_MSP %>% 
+  mutate(geometry = st_make_valid(geometry)) %>% 
+  group_by(regiao) %>% 
+  summarise(geometry = st_union(st_buffer(geometry, 0))) %>% 
+  sf::st_simplify(preserveTopology = TRUE)
+```
+
+
+
+```{r fig 2 distritos administrativos, cap="Integracao do shapefile dos distritos no shapefile dos municipios do ESP"}
+df_municipios <- geobr::read_municipality(code_muni = "SP",
+                                      year = 2022,
+                                      showProgress = FALSE) %>%
+  select(name_muni,geom) %>%
+  rename(NM_MUN=name_muni) %>%
+  mutate(NM_MUN = gsub("í","i",NM_MUN) %>%
+           gsub("ã","a",.) %>%
+           gsub("â","a",.) %>%
+           gsub("á|Á","a",.) %>%
+           gsub("ó|Ó","o",.) %>%
+           gsub("ô","o",.) %>%
+           gsub("õ|Ô","o",.) %>%
+           gsub("é","e",.) %>%
+           gsub("ç","c",.) %>%
+           gsub("ê","e",.) %>%
+           gsub("ú","u",.) %>%
+           gsub("ó","o",.) %>%
+           gsub("ô","o",.) %>%
+           gsub("í|Í","i",.) %>%
+           toupper(.),
+         NM_MUN = dplyr::case_when(
+           NM_MUN=="MOGI MIRIM" ~ "MOJI MIRIM",
+           NM_MUN=="BIRITIBA MIRIM" ~ "BIRITIBA-MIRIM",
+           NM_MUN=="SAO LUIZ DO PARAITINGA" ~ "SAO LUIS DO PARAITINGA",
+           NM_MUN=="FLORINEA" ~ "FLORINIA",
+           TRUE ~ NM_MUN),
+         NM_DIST=NA) %>% relocate(NM_DIST,.after = "NM_MUN")
+st_geometry(df_municipios) <- "geometry"
+if (st_crs(df_municipios) != st_crs(df_distMSP)) {
+  df_municipios <- st_transform(df_municipios, st_crs(df_distMSP))
+}
+#
+df_regMSP <- sf_MSP %>% 
+  mutate(geometry = st_make_valid(geometry)) %>% 
+  group_by(regiao) %>% 
+  # summarise(geometry = st_union(geometry)) %>% 
+  summarise(geometry = st_union(st_buffer(geometry, 0))) %>% 
+  mutate(NM_MUN="SAO PAULO") %>% 
+  rename("NM_DIST" = "regiao")
+#
+df_munESP_distMSP <- rbind(
+  df_municipios %>% filter(NM_MUN!="SAO PAULO"),
+  df_regMSP
+) %>% 
+  mutate(NM_MUN = gsub("APARECIDA D'OESTE","APARECIDA D OESTE",NM_MUN) %>% 
+           gsub("ARCO-IRIS","ARCO IRIS",.) %>% 
+           gsub("BIRITIBA-MIRIM","BIRITIBA MIRIM",.) %>% 
+           gsub("EMBU-GUACU","EMBU GUACU",.) %>% 
+           gsub("ESTRELA D'OESTE","ESTRELA D OESTE",.) %>% 
+           gsub("FLORINIA","FLORINEA",.) %>% 
+           gsub("GUARANI D'OESTE","GUARANI D OESTE",.) %>% 
+           gsub("MOJI MIRIM","MOGI MIRIM",.) %>% 
+           gsub("PALMEIRA D'OESTE","PALMEIRA D OESTE",.) %>% 
+           gsub("PARIQUERA-ACU","PARIQUERA ACU",.) %>% 
+           gsub("SANTA BARBARA D'OESTE","SANTA BARBARA D OESTE",.) %>% 
+           gsub("SANTA CLARA D'OESTE","SANTA CLARA D OESTE",.) %>% 
+           gsub("SANTA RITA D'OESTE","SANTA RITA D OESTE",.) %>% 
+           gsub("SAO JOAO DO PAU D'ALHO","SAO JOAO DO PAU D ALHO",.) %>% 
+           gsub("SAO LUIS DO PARAITINGA","SAO LUIZ DO PARAITINGA",.))
+#
+l_p <- list()
+l_p$`mun. do ESP` <- df_municipios %>% ggplot(aes(color=NM_MUN=="SAO PAULO")) + 
+  geom_sf() + theme(legend.position = "none") +
+  scale_color_manual(values = setNames(c('black','red'),c(F, T))) 
+l_p$`mun. do ESP + distritos MSP` <- df_munESP_distMSP %>% ggplot(aes(color=NM_MUN=="SAO PAULO")) + 
+  geom_sf() + theme(legend.position = "none") +
+  scale_color_manual(values = setNames(c('black','red'),c(F, T)))
+grid.arrange(grobs=l_p,ncol=2,top="Comparação dos shapefiles com MSP e com regiões de MSP\n geobr::read_municipality")
+```
+  
+    
+### fig 2: Comparação do shapefile do ESP com e sem regiões do MSP  
+  
+
+# Coordenadas geográficas estimadas dos CNES notificantes
+
+- 1) Filtro sem duplicações dos CNES de notificação entre 2022 e 2023
+- 2) combinação com a base de dados obtida pelo pySUS para obter os endereços dos CNES
+- 3) geocodificação pela função tidygeocoder::geocode(method="here")
+- 4) preenchimento manual das coordenadas indisponíveis pelo method='here' usando o google maps
+
+```{r coordenadas dos pontos geocodificados}
+v_crs <- st_crs(df_munESP_distMSP)
+df_cnes_latlong <- readRDS(file="../resultados/df_cnes_latlong.rds") %>% 
+  st_as_sf(.,coords = c("long", "lat"), crs = v_crs)
+df_cnes_latlong %>% ggplot(aes(color=method)) + geom_sf() + theme_bw() + labs(title="st_as_sf(crs = st_crs(poligonos)") + 
+  scale_color_manual("",values=c("red","black")) + theme(legend.position = "bottom")
+# save(df_munESP_distMSP,df_cnes_latlong,file="./comunicacao/objetos_html.Rdata")
+```
+  
+    
+### Fig 3 pontos geocodificados dos CNES notificantes pelo método 'here' e manualmente pelo google maps  
+  
+  
+# Sobreposição dos pontos geocodificados e dos shapefiles
+
+__DÚVIDA__ Como trabalhar com a diferença no bbox?
+  
+Ao sobrepor os pontos geocodificados e os shapefiles não há sobreposição nenhuma. Observei que o 'Bounding box' de cada um difere muito:
+
+- pontos: 
+```{r}
+st_bbox(df_cnes_latlong)
+```
+
+- poligonos:
+```{r}
+st_bbox(df_munESP_distMSP)
+```
+  
+

@@ -7,7 +7,7 @@ library(plyr)
 library(tidyverse)
 library(mgcv)
 # leitura e padronização das bases:
-l_csv <- list.files(path=".",pattern=".csv")
+l_csv <- list.files(path="./base_pop_tabnetMSP",pattern=".csv",full.names = TRUE)
 f_readcsv <- \(csvpath){
   # leitura
   year_data <- str_extract(readLines(csvpath, n = 3)[3], "\\d+")
@@ -93,11 +93,14 @@ df_pop_ESP_distMSP <- rbind(
 #   geom_point() +
 #   geom_smooth(method="lm")
 ######## avaliação do shapefile ########
-df_distMSP <- read_sf("./LAYER_DISTRITO/DEINFO_DISTRITO.shp") %>% 
+df_distMSP <- read_sf("./shp_files/LAYER_DISTRITO/DEINFO_DISTRITO.shp") %>% 
   select(NOME_DIST) %>% 
   mutate(NM_MUN="SAO PAULO") %>% 
   relocate(NM_MUN) %>% 
   rename(NM_DIST=NOME_DIST)
+st_crs(df_distMSP)
+
+
 # linkage das bases
 df_municipios <- geobr::read_municipality(code_muni = "SP",
                                       year = 2022,

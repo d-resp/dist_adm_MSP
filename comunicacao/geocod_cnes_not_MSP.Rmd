@@ -3,6 +3,8 @@ title: "Geocodificação e auditoria dos CNES de notificação de SRAG no MSP 20
 author: "DVRESP, Danilo P. Mori"
 date: "2024-07-25"
 output: html_document
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE, warning=FALSE, message=FALSE,echo=FALSE}
@@ -15,6 +17,7 @@ library(grid)
 library(gridExtra)
 library(tidyverse)
 library(mgcv)
+library(tidygeocoder)
 source("../source/general_tools.R")
 ```
 
@@ -58,26 +61,41 @@ l_p$`regioes` <- sf_MSP %>%
   mutate(geometry = st_make_valid(geometry)) %>% 
   group_by(regiao) %>% 
   # summarise(geometry = st_union(geometry)) %>% 
-  summarise(geometry = st_union(st_buffer(geometry, 0))) %>% 
+  summarise(geometry = st_union(st_buffer(geometry, 0.0001))) %>% 
   sf::st_simplify(preserveTopology = TRUE) %>% 
-  ggplot() + geom_sf() + labs(title="Regiões, sf::st_union")
+  ggplot() + geom_sf() + labs(title="Regiões",subtitle="sf::st_union(st_buffer(geometry,0.0001))")
 grid.arrange(grobs=l_p,ncol=2,top="SAD69 / UTM zone 23S")
+####
+# teste de limpeza dos poligonos:
+sf_regMSP <- sf_MSP %>% 
+  mutate(geometry = st_make_valid(geometry)) %>% 
+  group_by(regiao) %>% 
+  summarise(geometry = st_union(st_buffer(geometry, 0.0001))) %>% 
+  sf::st_simplify(preserveTopology = TRUE)
+#
+# Define a minimum area threshold to filter out small artifacts
+# min_area_threshold <- 1e-4 # Adjust this threshold based on your data
+# # Calculate the area of each polygon
+# large_polygons <- sf_regMSP %>%
+#   mutate(area = st_area(geometry))
+# large_polygons %>% ggplot() + geom_sf()
+# # Filter out small polygons
+# clean_polygons <- large_polygons %>%
+#   filter(area > min_area_threshold) %>%
+#   select(-area) 
 ```
+  23.4 S - 24.0 S e 46.8 W - 46.4 W 
   
-  
-### Fig 1: comparação da agregação dos distritos administrativos do MSP  
-  
-    
+#### Fig 1: comparação da agregação dos distritos administrativos do MSP  
 
 ```{r exemplo de codigo usado para juntar os shapefiles dos distritos do MSP,echo=TRUE,eval=FALSE}
 # exemplo do código usado para unir os shapefiles dos distritos do MSP
-sf_MSP %>% 
+sf_regMSP <- sf_MSP %>% 
   mutate(geometry = st_make_valid(geometry)) %>% 
   group_by(regiao) %>% 
-  summarise(geometry = st_union(st_buffer(geometry, 0))) %>% 
+  summarise(geometry = st_union(st_buffer(geometry, 0.0001))) %>% 
   sf::st_simplify(preserveTopology = TRUE)
 ```
-
 
 
 ```{r fig 2 distritos administrativos, cap="Integracao do shapefile dos distritos no shapefile dos municipios do ESP"}
@@ -148,50 +166,76 @@ l_p$`mun. do ESP` <- df_municipios %>% ggplot(aes(color=NM_MUN=="SAO PAULO")) +
 l_p$`mun. do ESP + distritos MSP` <- df_munESP_distMSP %>% ggplot(aes(color=NM_MUN=="SAO PAULO")) + 
   geom_sf() + theme(legend.position = "none") +
   scale_color_manual(values = setNames(c('black','red'),c(F, T)))
-grid.arrange(grobs=l_p,ncol=2,top="Comparação dos shapefiles com MSP e com regiões de MSP\n geobr::read_municipality")
+# grid.arrange(grobs=l_p,ncol=2,top="Comparação dos shapefiles com MSP e com regiões de MSP\n geobr::read_municipality")
+l_p$`mun. do ESP + distritos MSP` + labs(title="Municípios de ESP com o MSP em grandes regiões")
+
 ```
   
-    
-### fig 2: Comparação do shapefile do ESP com e sem regiões do MSP  
-  
-
-# Coordenadas geográficas estimadas dos CNES notificantes
+#### Fig. 2 Municípios do ESP com as grandes regiões do MSP    
+   
+ 
+# Coordenadas geográficas estimadas dos CNES notificantes e sobreposição com os poligonos das grandes regiões
 
 - 1) Filtro sem duplicações dos CNES de notificação entre 2022 e 2023
 - 2) combinação com a base de dados obtida pelo pySUS para obter os endereços dos CNES
 - 3) geocodificação pela função tidygeocoder::geocode(method="here")
 - 4) preenchimento manual das coordenadas indisponíveis pelo method='here' usando o google maps
 
+
+```{r exemplo de geocodificação }
+# exemplo de geocodificação
+df_togeocod <- df_geocodMSP %>% select(cnes,logradouro:municipio) %>% distinct()
+df_togeocod$endereco = Reduce("f_paste",df_togeocod[,-1])
+Sys.setenv(HERE_API_KEY = "MINHACHAVE")
+df_cnes_latlong <- df_togeocod %>% 
+  select(cnes,endereco) %>% 
+  geocode(address = endereco, method="here") 
+```
+
 ```{r coordenadas dos pontos geocodificados}
-st_crs(df_munESP_distMSP)$proj4string==st_crs(df_cnes_latlong)$proj4string
-
-v_crs <- st_crs(df_munESP_distMSP)$proj4string
-# st_crs(df_cnes_latlong)$proj4string
-df_cnes_latlong <- readRDS(file="../resultados/df_cnes_latlong.rds") %>% 
-  st_as_sf(.,coords = c("long", "lat"), crs = v_crs)
-df_cnes_latlong %>% ggplot(aes(color=method)) + geom_sf() + theme_bw() + labs(title="st_as_sf(crs = st_crs(poligonos)") + 
-  scale_color_manual("",values=c("red","black")) + theme(legend.position = "bottom")
-# save(df_munESP_distMSP,df_cnes_latlong,file="./comunicacao/objetos_html.Rdata")
+pontos <- readRDS(file="../resultados/df_cnes_latlong.rds") %>% 
+  st_as_sf(.,coords = c("long", "lat"),crs=4326) #, crs = v_crs
+points_transformed <- st_transform(pontos, st_crs(df_munESP_distMSP))
+sf_joint_pp <- st_join(points_transformed,sf_regMSP)
+ggplot() +
+  geom_sf(data = sf_regMSP, fill = "lightblue", color = "black", alpha = 0.5) +
+  geom_sf(data = sf_joint_pp, aes(color = regiao)) +
+  theme_minimal() +
+  labs(title = "CNES notificantes",
+       subtitle="SRAG: 2022-2023",
+       color = "") +
+  guides(color=guide_legend(nrow=2, byrow=TRUE)) +
+  theme(legend.position = "bottom")
 ```
   
-    
 ### Fig 3 pontos geocodificados dos CNES notificantes pelo método 'here' e manualmente pelo google maps  
-  
-  
-# Sobreposição dos pontos geocodificados e dos shapefiles
 
-__DÚVIDA__ Como trabalhar com a diferença no bbox?
-  
-Ao sobrepor os pontos geocodificados e os shapefiles não há sobreposição nenhuma. Observei que o 'Bounding box' de cada um difere muito:
 
-- pontos: 
+# Rotina de geocodificação dos endereços de residência dos casos de SRAG: 2022-2023
+  
 ```{r}
-st_bbox(df_cnes_latlong)
+oname <- load("C:/Users/dpmori/Desktop/trabalho_em_andamento/Geo_covid_030724.Rdata")
+df_geocod <- get(oname);rm(list=oname);gc()
+df_reference_full <- df_geocod %>% filter(Geo=="ok",ID_MN_RESI=="SAO PAULO",anoepi %in% 2022:2023)
+#
+df_latlong_SRAG <- df_reference_full %>% select(NU_NOTIFIC,Logradouro_Completo,x,y) %>% 
+  st_as_sf(.,coords = c("x", "y"),crs=4326) #, crs = v_crs
+points_transformed <- st_transform(df_latlong_SRAG, st_crs(df_munESP_distMSP))
+sf_joint_pp <- st_join(points_transformed,sf_regMSP)
+ggplot() +
+  geom_sf(data=sf_regMSP) +
+  geom_sf(data=df_latlong_SRAG)
+
+
+set.seed(1234)
+df_ref <- df_reference_full[sample(1:nrow(df_reference_full),200),]
+df_ref <- df_ref %>% select(NU_NOTIFIC,Logradouro_Completo,x,y)
+#
+Sys.setenv(HERE_API_KEY = "satAmDy2WRSF25bYxXicCaM8olNeM8GB5YA15wAwAUM")
+df_aud <- df_ref %>% 
+  geocode(address = Logradouro_Completo, method="osm")
+
 ```
 
-- poligonos:
-```{r}
-st_bbox(df_munESP_distMSP)
-```
-  
+
 

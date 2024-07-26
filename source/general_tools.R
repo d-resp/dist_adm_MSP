@@ -38,3 +38,25 @@ f_casewhen <- \(vstring){
     gsub("SAO JOAO DO PAU D'ALHO","SAO JOAO DO PAU D ALHO",.) %>% 
     gsub("SAO LUIS DO PARAITINGA","SAO LUIZ DO PARAITINGA",.)
 }
+
+# f_geocod_regMSP
+f_geocod_regMSP <- \(df_novoscasos,method_geocod="here",api_key=NULL){
+  if(!any(grepl("Logradouro_Completo",names(df_novoscasos)))){
+    stop("Logradouro_Completo deve ser no formato:\n rua, número, bairro, município, cep, estado, pais")
+  }
+  if(nrow(df_novoscasos)>1000){
+    stop("máximo de 1000 solicitações por dia no método 'here',\n reduza o número de pedidos")
+  }
+  if(method_geocod=="here"&is.null(api_key)){
+    Sys.setenv(HERE_API_KEY = "satAmDy2WRSF25bYxXicCaM8olNeM8GB5YA15wAwAUM")
+  }
+  if(!is.null(api_key)){
+    Sys.setenv(HERE_API_KEY = api_key)
+  }
+  # geocodificação per se
+  
+  #
+  sf_regMSP
+  sf_joint_pp <- st_join(sf_pontos,sf_regMSP)
+  return(sf_joint_pp)
+}

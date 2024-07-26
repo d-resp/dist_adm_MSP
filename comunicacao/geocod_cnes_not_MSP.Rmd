@@ -72,6 +72,9 @@ sf_regMSP <- sf_MSP %>%
   group_by(regiao) %>% 
   summarise(geometry = st_union(st_buffer(geometry, 0.0001))) %>% 
   sf::st_simplify(preserveTopology = TRUE)
+saveRDS(sf_regMSP,file="")
+sf_regMSP %>% ggplot() + geom_sf(aes(color=regiao))
+
 #
 # Define a minimum area threshold to filter out small artifacts
 # min_area_threshold <- 1e-4 # Adjust this threshold based on your data
@@ -95,6 +98,7 @@ sf_regMSP <- sf_MSP %>%
   group_by(regiao) %>% 
   summarise(geometry = st_union(st_buffer(geometry, 0.0001))) %>% 
   sf::st_simplify(preserveTopology = TRUE)
+
 ```
 
 
@@ -224,17 +228,16 @@ points_transformed <- st_transform(df_latlong_SRAG, st_crs(df_munESP_distMSP))
 sf_joint_pp <- st_join(points_transformed,sf_regMSP)
 ggplot() +
   geom_sf(data=sf_regMSP) +
-  geom_sf(data=df_latlong_SRAG)
-
-
-set.seed(1234)
-df_ref <- df_reference_full[sample(1:nrow(df_reference_full),200),]
-df_ref <- df_ref %>% select(NU_NOTIFIC,Logradouro_Completo,x,y)
-#
+  geom_sf(data=sf_joint_pp,aes(color=regiao),alpha=0.1)
+# 
+# 
+# set.seed(1234)
+# df_ref <- df_reference_full[sample(1:nrow(df_reference_full),200),]
+# df_ref <- df_ref %>% select(NU_NOTIFIC,Logradouro_Completo,x,y)
+# #
 Sys.setenv(HERE_API_KEY = "satAmDy2WRSF25bYxXicCaM8olNeM8GB5YA15wAwAUM")
-df_aud <- df_ref %>% 
+df_aud <- df_ref %>%
   geocode(address = Logradouro_Completo, method="osm")
-
 ```
 
 

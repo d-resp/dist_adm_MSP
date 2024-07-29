@@ -11,6 +11,52 @@ source("./source/general_tools.R")
 ```
 
 
+# 29/07/2024
+
+Hoje foi iniciado duas novas demandas em relação ao artigo do satscan:
+
+a) início da criação de shapefile CIR2
+b) trabalho nos casos de SRAG usado na base de dados
+
+a) criação de shapefile CIR2
+1) pegar a tabela de CIR1 e plotar pelo tamanho populacional
+2) 
+
+b) trabalho nos casos de SRAG
+1) padronização das datas dos casos usados EM ANDAMENTO
+2) geocodificação dos casos filtrados
+
+nota: documento com o shapefile do CIR
+
+G:/CCD/CVE/RESPIRATORIAS/05_SRAG_SISTEMA_DE_ALERTA/00_dados_auxiliares/CIR/CIR.shp
+
+```{r criacao de shapefile CIR2}
+# 1) pegar tabela de CIR1
+##Baixando cir
+cir<-readxl::read_excel("G:/CCD/CVE/RESPIRATORIAS/05_SRAG_SISTEMA_DE_ALERTA/00_dados_auxiliares/DRS_GVS_CEREST_RRAS_CIR_GVE_MUNICIPIO_MATRIZ.xls")
+cir<- cir |> dplyr::select(Cod6, RS_CIR, COD_CIR,MUNICIPIO...15)|>
+  dplyr::rename(co_mun_res=Cod6,
+                cod_cir=COD_CIR,
+                nm_mn_resi=MUNICIPIO...15)
+# shf dos mun do ESP com o MSP em subregiões
+sf_ESP <- readRDS("./shp_files/sf_munESP_distMSP.rds")
+
+```
+
+
+
+
+```{r casos de SRAG usado no artigo}
+df_srag <- readRDS(file="./dados/casosSRAG_dt_padronizado.rds")
+
+```
+
+o total de casos ainda é elevado para geocodificar todos: 52 355 casos no MSP
+
+
+
+
+#### geocodificação e merge de poligonos feito!!! 
 # 24/07/2024
 
 A estratégia é:

@@ -4,7 +4,7 @@ author: "DVRESP, Danilo P. Mori"
 date: "2024-07-25"
 output: html_document
 editor_options: 
-  chunk_output_type: console
+  chunk_output_type: inline
 ---
 
 ```{r setup, include=FALSE, warning=FALSE, message=FALSE,echo=FALSE}
@@ -63,7 +63,7 @@ l_p$`regioes` <- sf_MSP %>%
   # summarise(geometry = st_union(geometry)) %>% 
   summarise(geometry = st_union(st_buffer(geometry, 0.0001))) %>% 
   sf::st_simplify(preserveTopology = TRUE) %>% 
-  ggplot() + geom_sf() + labs(title="Regiões",subtitle="sf::st_union(st_buffer(geometry,0.0001))")
+  ggplot() + geom_sf(aes(fill=regiao)) + labs(title="Regiões",subtitle="sf::st_union(st_buffer(geometry,0.0001))")
 grid.arrange(grobs=l_p,ncol=2,top="SAD69 / UTM zone 23S")
 ####
 # teste de limpeza dos poligonos:
@@ -72,12 +72,7 @@ sf_regMSP <- sf_MSP %>%
   group_by(regiao) %>% 
   summarise(geometry = st_union(st_buffer(geometry, 0.0001))) %>% 
   sf::st_simplify(preserveTopology = TRUE)
-saveRDS(sf_regMSP,file="")
-sf_regMSP %>% ggplot() + geom_sf(aes(color=regiao))
-
 #
-# Define a minimum area threshold to filter out small artifacts
-# min_area_threshold <- 1e-4 # Adjust this threshold based on your data
 # # Calculate the area of each polygon
 # large_polygons <- sf_regMSP %>%
 #   mutate(area = st_area(geometry))
@@ -87,7 +82,7 @@ sf_regMSP %>% ggplot() + geom_sf(aes(color=regiao))
 #   filter(area > min_area_threshold) %>%
 #   select(-area) 
 ```
-  23.4 S - 24.0 S e 46.8 W - 46.4 W 
+  
   
 #### Fig 1: comparação da agregação dos distritos administrativos do MSP  
 
@@ -172,7 +167,7 @@ l_p$`mun. do ESP + distritos MSP` <- df_munESP_distMSP %>% ggplot(aes(color=NM_M
   scale_color_manual(values = setNames(c('black','red'),c(F, T)))
 # grid.arrange(grobs=l_p,ncol=2,top="Comparação dos shapefiles com MSP e com regiões de MSP\n geobr::read_municipality")
 l_p$`mun. do ESP + distritos MSP` + labs(title="Municípios de ESP com o MSP em grandes regiões")
-
+saveRDS(df_munESP_distMSP,file="../shp_files/sf_munESP_distMSP.rds")
 ```
   
 #### Fig. 2 Municípios do ESP com as grandes regiões do MSP    
@@ -208,14 +203,16 @@ ggplot() +
   labs(title = "CNES notificantes",
        subtitle="SRAG: 2022-2023",
        color = "") +
-  guides(color=guide_legend(nrow=2, byrow=TRUE)) +
-  theme(legend.position = "bottom")
+  # guides(color=guide_legend(nrow=2, byrow=TRUE)) +
+  theme(legend.position = "right")
 ```
   
 ### Fig 3 pontos geocodificados dos CNES notificantes pelo método 'here' e manualmente pelo google maps  
 
 
 # Rotina de geocodificação dos endereços de residência dos casos de SRAG: 2022-2023
+
+EM TRABALHO: 
   
 ```{r}
 oname <- load("C:/Users/dpmori/Desktop/trabalho_em_andamento/Geo_covid_030724.Rdata")

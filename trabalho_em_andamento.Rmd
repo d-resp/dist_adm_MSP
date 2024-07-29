@@ -31,15 +31,58 @@ nota: documento com o shapefile do CIR
 G:/CCD/CVE/RESPIRATORIAS/05_SRAG_SISTEMA_DE_ALERTA/00_dados_auxiliares/CIR/CIR.shp
 
 ```{r criacao de shapefile CIR2}
+f_gsub <- \(vstring){
+  vstring %>% 
+    gsub("Ç",'C',.) %>% 
+    gsub("Â",'A',.) %>% 
+    gsub("É",'E',.) %>% 
+    gsub("Ê","E",.) %>% 
+    gsub("Á",'A',.) %>% 
+    gsub("Ã",'A',.) %>% 
+    gsub("Í",'I',.) %>% 
+    gsub("Ó",'O',.) %>% 
+    gsub("Õ","O",.) %>% 
+    gsub("Ú",'U',.) %>% 
+    gsub("Ô",'O',.) %>% 
+    gsub("-"," ",.) %>%
+    gsub("'"," ",.) %>%
+    gsub("CIDADE","CID",.) %>% 
+    gsub("JD","JARDIM",.) %>% 
+    gsub("FLORINIA","FLORINEA",.) %>% 
+    gsub("SAO LUIS DO PARAITINGA","SAO LUIZ DO PARAITINGA",.) %>% 
+    gsub("MOJI MIRIM","MOGI MIRIM",.)
+}
 # 1) pegar tabela de CIR1
 ##Baixando cir
 cir<-readxl::read_excel("G:/CCD/CVE/RESPIRATORIAS/05_SRAG_SISTEMA_DE_ALERTA/00_dados_auxiliares/DRS_GVS_CEREST_RRAS_CIR_GVE_MUNICIPIO_MATRIZ.xls")
 cir<- cir |> dplyr::select(Cod6, RS_CIR, COD_CIR,MUNICIPIO...15)|>
   dplyr::rename(co_mun_res=Cod6,
                 cod_cir=COD_CIR,
-                nm_mn_resi=MUNICIPIO...15)
+                nm_mn_resi=MUNICIPIO...15) %>% 
+  mutate(nm_mn_resi = toupper(nm_mn_resi) %>% f_gsub)
 # shf dos mun do ESP com o MSP em subregiões
 sf_ESP <- readRDS("./shp_files/sf_munESP_distMSP.rds")
+# merge das bases
+# v_sf <- sf_ESP$NM_MUN %>% unique
+# v_cir <- cir$nm_mn_resi %>% unique
+# setdiff(v_sf,v_cir)
+# setdiff(v_cir,v_sf)
+sf_tocir <- inner_join(
+  sf_ESP,
+  cir,
+  by=c("NM_MUN"="nm_mn_resi")
+)
+sf_tocir <- sf_tocir %>% 
+  mutate(RS_CIR = ifelse(cod_cir==35016,
+                         paste0("SP_",NM_DIST),
+                         RS_CIR))
+sf_tocir %>%
+  ggplot() +
+  # geom_sf(aes(fill=grepl("CAMPINAS",RS_CIR))) +
+  geom_sf(aes(fill=RS_CIR)) +
+  theme(legend.position = "none")
+# dados populacionais para auxiliar na decisão de como 
+
 
 ```
 

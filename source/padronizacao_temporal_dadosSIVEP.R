@@ -27,7 +27,6 @@ library(plyr)
 
 ###Funções
 texto_simples <- function(x){
-  
   var = stringr::str_to_upper(x) #capital letters
   var = gsub("Á","A", var) #replacing all punctuation
   var = gsub("Â","A", var)

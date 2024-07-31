@@ -7,6 +7,7 @@ editor_options:
 ```{r}
 library(plyr)
 library(tidyverse)
+library(sf)
 source("./source/general_tools.R")
 ```
 
@@ -82,7 +83,58 @@ sf_tocir %>%
   geom_sf(aes(fill=RS_CIR)) +
   theme(legend.position = "none")
 # dados populacionais para auxiliar na decisão de como 
+```
+```{r}
+# shapefile com os dados populacionais dos mun do ESP e dos dist do MSP
+sf_pop_ESP_distMSP <- readRDS("G:/CCD/CVE/RESPIRATORIAS/11_MAPAS/MSP_dist_adm/sf_pop_ESP_distMSP_2000-2024.rds")
+# shapefile apenas dos distritos do MSP
+sf_regMSP <- sf_pop_ESP_distMSP %>% 
+  filter(NM_MUN=="SAO PAULO") %>% 
+  select(starts_with("NM"),`2022`)
+# tabela com a informação de quais distritos compõem cada grande região do MSP
+df_ref_regdist <- read_tsv(file="./documentos_gerais/ref_reg_DistAdm_MSP.txt",
+                           locale = locale(encoding = 'latin1'))
+df_ref_regdist <- ddply(df_ref_regdist,"regiao",\(dfi){
+  v_dist <- strsplit(dfi$distritos,split = ", ") %>% 
+    unlist() %>% strsplit(dfi$distritos,split = ",") %>% unlist()
+  data.frame(regiao=dfi$regiao[1],
+             dist_adm = v_dist)
+}) %>% mutate(dist_adm = f_casewhen(dist_adm) %>% 
+                gsub("CIDADE","CID",.) %>% 
+                gsub("JARDIM","JD",.))
+# Regioes do MSP: merge dos poligonos e sumarização do tamanho populacional 
+sf_regMSP <- inner_join(
+  sf_regMSP,
+  df_ref_regdist,
+  by=c("NM_DIST"="dist_adm")
+) %>% rename("pop2022"="2022") %>% 
+  group_by(regiao) %>% 
+  summarise(geometry = st_union(st_buffer(geometry, 0.0001)),
+            pop2022 = sum(pop2022)) %>%
+  sf::st_simplify(preserveTopology = TRUE) %>% 
+  mutate(NM_MUN="SAO PAULO") %>% 
+  relocate(NM_MUN,regiao,pop2022)
+# sf_regMSP %>% 
+#   ggplot() +
+#   geom_sf(aes(fill=pop2022))
+#
+# ESP: merge dos municípios com as regiões de MSP
+sf_munESP_regMSP <- rbind(
+  sf_pop_ESP_distMSP %>% 
+    filter(NM_MUN!="SAO PAULO") %>% 
+    select(NM_MUN,`2022`) %>% 
+    rename("pop2022"="2022") %>% 
+    mutate(regiao = NA),
+  sf_regMSP
+)
+# sf_munESP_regMSP %>% 
+#   ggplot() +
+#   geom_sf(aes(fill=pop2022))
 
+sf_tocir_camp <- sf_tocir %>% 
+  filter(grepl("CAMPINAS",RS_CIR)) %>% 
+  inner_join(select(sf_pop_ESP_distMSP,
+                    starts_with("NM"),`2024`))
 
 ```
 

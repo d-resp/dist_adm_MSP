@@ -34,7 +34,8 @@ v_crs <- st_crs(df_distMSP)
 ###
 df_ref_regdist <- read_tsv(file="../documentos_gerais/ref_reg_DistAdm_MSP.txt",locale = locale(encoding = 'latin1'))
 df_ref_regdist <- ddply(df_ref_regdist,"regiao",\(dfi){
-  v_dist <- strsplit(dfi$distritos,split = ", ") %>% unlist() %>% strsplit(dfi$distritos,split = ",") %>% unlist()
+  v_dist <- strsplit(dfi$distritos,split = ", ") %>% 
+    unlist() %>% strsplit(dfi$distritos,split = ",") %>% unlist()
   data.frame(regiao=dfi$regiao[1],
              dist_adm = v_dist)
 }) %>% mutate(dist_adm = f_casewhen(dist_adm) %>% 
@@ -215,9 +216,21 @@ ggplot() +
 EM TRABALHO: 
   
 ```{r}
+# casos usados no artigo
+df_srag <- readRDS("../dados/casosSRAG_dt_padronizado.rds")
+# casos geocod pela Raquel
 oname <- load("C:/Users/dpmori/Desktop/trabalho_em_andamento/Geo_covid_030724.Rdata")
 df_geocod <- get(oname);rm(list=oname);gc()
-df_reference_full <- df_geocod %>% filter(Geo=="ok",ID_MN_RESI=="SAO PAULO",anoepi %in% 2022:2023)
+df_geocodref <- df_geocod %>% 
+  filter(Geo=="ok",ID_MN_RESI=="SAO PAULO",anoepi %in% 2022:2023) %>% 
+  rename_with(tolower)
+# merge
+v_srag <- names(df_srag)
+v_geocod <- names(df_geocodref)
+setdiff(v_srag,v_geocod)
+
+# casos 
+
 #
 df_latlong_SRAG <- df_reference_full %>% select(NU_NOTIFIC,Logradouro_Completo,x,y) %>% 
   st_as_sf(.,coords = c("x", "y"),crs=4326) #, crs = v_crs

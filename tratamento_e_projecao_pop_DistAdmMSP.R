@@ -166,7 +166,7 @@ saveRDS(sf_pop_ESP_distMSP,
 sf_pop_ESP_distMSP <- readRDS("G:/CCD/CVE/RESPIRATORIAS/11_MAPAS/MSP_dist_adm/sf_pop_ESP_distMSP_2000-2024.rds")
 
 sf_pop_ESP_distMSP %>% 
-  filter(NM_MUN=="SAO PAULO") %>% 
+  # filter(NM_MUN=="SAO PAULO") %>% 
   ggplot(aes(fill=`2024`)) +
   geom_sf(linewidth=0.001)
 aud <- teste %>% select(starts_with("NM"),`2024`)

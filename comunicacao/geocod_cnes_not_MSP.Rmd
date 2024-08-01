@@ -308,7 +308,7 @@ sf_cir2 <- sf_pop %>%
             across(starts_with("pop"),sum),
             NM_MUN = list(unique(NM_MUN))) %>% 
   relocate(geometry,.after=last_col())
-
+saveRDS(sf_cir2,file="../resultados/sf_cir2_poptotal.rds")
 l_p <- list()
 l_p[[1]] <- teste %>% 
   ggplot() +

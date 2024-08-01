@@ -47,7 +47,7 @@ sf_MSP <- readRDS("G:/CCD/CVE/RESPIRATORIAS/11_MAPAS/MSP_dist_adm/sf_pop_ESP_dis
 # setdiff
 v_ref <- df_ref_regdist$dist_adm
 v_sf <- sf_MSP$NM_DIST
-setdiff(v_ref,v_sf)
+# setdiff(v_ref,v_sf)
 sf_MSP <- inner_join(
   sf_MSP,
   df_ref_regdist,
@@ -250,5 +250,74 @@ df_aud <- df_ref %>%
   geocode(address = Logradouro_Completo, method="osm")
 ```
 
+# Criação de shapefile CIR2
+
+CIR2 difere de CIR em dois aspectos:
+i) MSP está divido em 5 áreas: centro, leste, oeste, sul e norte. 
+ii) Reg. Met. de Campinas está divido em áreas, conforme os eixos de expansão populacional dessa região.
+
+
+```{r}
+# sf pop munESP e reg MSP
+sf_pop <- readRDS(file="../resultados/parciais/sf_munESP_regMSP_pop2022e2023.rds")
+# composição atual dos CIR
+cir<-readxl::read_excel("G:/CCD/CVE/RESPIRATORIAS/05_SRAG_SISTEMA_DE_ALERTA/00_dados_auxiliares/DRS_GVS_CEREST_RRAS_CIR_GVE_MUNICIPIO_MATRIZ.xls")
+cir<- cir |> dplyr::select(Cod6, RS_CIR, COD_CIR,MUNICIPIO...15)|>
+  dplyr::rename(co_mun_res=Cod6,
+                cod_cir=COD_CIR,
+                nm_mn_resi=MUNICIPIO...15) %>% 
+  mutate(nm_mn_resi = toupper(nm_mn_resi) %>% f_gsub) %>% 
+  rename(NM_MUN = nm_mn_resi)
+# proposta de fragmentação do CIR de campinas
+df_divREGMETCAMP <- read_csv2(file="../dados/proposta_div_RMCampinas.csv") %>% 
+  mutate(municipios = toupper(municipios),
+         eixo = factor(eixo,
+                       levels=c(1:4,6,8),
+                       labels=c(1:6))) %>% 
+  rename(NM_MUN=municipios) %>% 
+  filter(!is.na(eixo))
+# merge df CIR e CIR2
+v_cir1 <- cir$nm_mn_resi
+v_cir2 <- df_divREGMETCAMP$NM_MUN
+## setdiff(v_cir2,v_cir1)
+df_cir <- left_join(cir,df_divREGMETCAMP) %>% 
+  mutate(RS_CIR=ifelse(grepl("CAMPINAS",RS_CIR),paste0("CAMP_",eixo),RS_CIR)) %>% 
+  select(-eixo) %>% 
+  filter(co_mun_res!="355030") %>% 
+  rbind(.,
+        data.frame(
+         co_mun_res="355030",
+         RS_CIR = sf_pop %>% filter(NM_MUN=="SAO PAULO") %>% pull(regiao),
+         cod_cir = cir %>% filter(co_mun_res=="355030") %>% pull(cod_cir),
+         NM_MUN = "SAO PAULO"
+        ))
+# merge com os sf_pop
+sf_pop <- sf_pop %>% rename(RS_CIR=regiao)
+sf_pop[is.na(sf_pop$RS_CIR),] <- inner_join(
+  sf_pop[is.na(sf_pop$RS_CIR),] %>% select(-RS_CIR),
+  df_cir %>% select(NM_MUN,RS_CIR)
+)
+# merge dos poligonos de sf_pop em função de RS_CIR
+sf_pop %>% 
+  ggplot() +
+  geom_sf(aes(fill=pop2022))
+
+sf_cir2 <- sf_pop %>% 
+  group_by(RS_CIR) %>% 
+  summarise(geometry = st_union(st_buffer(geometry,45)),
+            across(starts_with("pop"),sum),
+            NM_MUN = list(unique(NM_MUN))) %>% 
+  relocate(geometry,.after=last_col())
+
+l_p <- list()
+l_p[[1]] <- teste %>% 
+  ggplot() +
+  geom_sf(aes(fill=pop2022))
+l_p[[2]] <- teste %>% 
+  ggplot() +
+  geom_sf(aes(fill=RS_CIR)) +
+  theme(legend.position = "bottom")
+grid.arrange(grobs=l_p,nrow=1)
+```
 
 

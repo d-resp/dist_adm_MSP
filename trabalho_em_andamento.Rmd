@@ -73,10 +73,11 @@ sf_tocir <- inner_join(
   cir,
   by=c("NM_MUN"="nm_mn_resi")
 )
-sf_tocir <- sf_tocir %>% 
+sf_tocir1 <- sf_tocir %>% 
   mutate(RS_CIR = ifelse(cod_cir==35016,
                          paste0("SP_",NM_DIST),
                          RS_CIR))
+saveRDS(sf_tocir1,file="./resultados/parciais/sf_tocir1.rds")
 sf_tocir %>%
   ggplot() +
   # geom_sf(aes(fill=grepl("CAMPINAS",RS_CIR))) +
@@ -84,13 +85,72 @@ sf_tocir %>%
   theme(legend.position = "none")
 # dados populacionais para auxiliar na decisão de como 
 ```
+
+# Como fragmentar a CIR da região metropolitana de Campinas?
+
 ```{r}
+# plot do tamanho populacional da região metropolitana de Campinas
+sf_tocir1 <- readRDS(file="./resultados/parciais/sf_tocir1.rds")
+sf_circamp <- sf_tocir1 %>% filter(grepl("CAMP",RS_CIR))
+#  tamanho populacional dos municípios de SP
+sf_pop_ESP_distMSP <- readRDS("G:/CCD/CVE/RESPIRATORIAS/11_MAPAS/MSP_dist_adm/sf_pop_ESP_distMSP_2000-2024.rds") 
+sf_circamp <- inner_join(
+  sf_circamp,
+  sf_pop_ESP_distMSP %>% as.data.frame() %>% select(NM_MUN,`2022`,`2023`)
+)
+# proposta de junção dos municipios
+df_divREGMETCAMP <- read_csv2(file="./dados/proposta_div_RMCampinas.csv") %>% 
+  mutate(municipios = toupper(municipios),
+         eixo = factor(eixo,
+                       levels=c(1:4,6,8),
+                       labels=c(1:6))) %>% 
+  rename(NM_MUN=municipios) %>% 
+  filter(!is.na(eixo))
+# merge
+v_sf <- sf_circamp$NM_MUN
+v_df <- df_divREGMETCAMP$NM_MUN
+# setdiff(v_sf,v_df)
+# setdiff(v_df,v_sf)
+sf_circamp <- inner_join(
+  sf_circamp,
+  df_divREGMETCAMP
+) %>% 
+  mutate(RS_CIR = paste0("CAMP_eixo",eixo))
+teste <- sf_circamp %>% 
+  select(-`2023`) %>% 
+  group_by(RS_CIR) %>% 
+  summarise(geometry = st_union(st_buffer(geometry, 45)), #0.0000000001
+            pop2022 = sum(`2022`))
+l_p <- lapply(c("pop2022","RS_CIR"),\(i){
+  teste %>% 
+    ggplot() +
+    geom_sf(aes(fill=.data[[i]]))
+})
+l_p[[3]] <- sf_circamp %>% 
+  ggplot() +
+  geom_sf(aes(fill=`2022`)) +
+  labs(title="municipios")
+grid.arrange(grobs=l_p[c(3,1:2)],nrow=1)
+# sf_circamp %>% 
+#   pivot_longer(matches("^[0-9]"),names_to = "ano", values_to = "pop") %>% 
+#   ggplot() +
+#   geom_sf(aes(fill=pop)) +
+#   facet_wrap(~ano,ncol=2)
+
+```
+
+
+
+
+
+
+```{r junção com os tamanhos populacionais}
 # shapefile com os dados populacionais dos mun do ESP e dos dist do MSP
 sf_pop_ESP_distMSP <- readRDS("G:/CCD/CVE/RESPIRATORIAS/11_MAPAS/MSP_dist_adm/sf_pop_ESP_distMSP_2000-2024.rds")
 # shapefile apenas dos distritos do MSP
 sf_regMSP <- sf_pop_ESP_distMSP %>% 
   filter(NM_MUN=="SAO PAULO") %>% 
-  select(starts_with("NM"),`2022`)
+  select(starts_with("NM"),`2022`,`2023`)
 # tabela com a informação de quais distritos compõem cada grande região do MSP
 df_ref_regdist <- read_tsv(file="./documentos_gerais/ref_reg_DistAdm_MSP.txt",
                            locale = locale(encoding = 'latin1'))
@@ -103,30 +163,36 @@ df_ref_regdist <- ddply(df_ref_regdist,"regiao",\(dfi){
                 gsub("CIDADE","CID",.) %>% 
                 gsub("JARDIM","JD",.))
 # Regioes do MSP: merge dos poligonos e sumarização do tamanho populacional 
-sf_regMSP <- inner_join(
+sf_regMSPpop <- inner_join(
   sf_regMSP,
   df_ref_regdist,
   by=c("NM_DIST"="dist_adm")
-) %>% rename("pop2022"="2022") %>% 
+) %>% rename("pop2022"="2022",
+             "pop2023"="2023") %>% 
   group_by(regiao) %>% 
-  summarise(geometry = st_union(st_buffer(geometry, 0.0001)),
-            pop2022 = sum(pop2022)) %>%
+  summarise(geometry = st_union(st_buffer(geometry, 1)),
+            pop2022 = sum(pop2022),
+            pop2023 = sum(pop2023)) %>%
   sf::st_simplify(preserveTopology = TRUE) %>% 
   mutate(NM_MUN="SAO PAULO") %>% 
   relocate(NM_MUN,regiao,pop2022)
-# sf_regMSP %>% 
-#   ggplot() +
-#   geom_sf(aes(fill=pop2022))
+sf_regMSPpop %>%
+  ggplot() +
+  geom_sf(aes(fill=pop2022))
 #
 # ESP: merge dos municípios com as regiões de MSP
 sf_munESP_regMSP <- rbind(
   sf_pop_ESP_distMSP %>% 
     filter(NM_MUN!="SAO PAULO") %>% 
-    select(NM_MUN,`2022`) %>% 
-    rename("pop2022"="2022") %>% 
+    select(NM_MUN,`2022`,`2023`) %>% 
+    rename("pop2022"="2022",
+           "pop2023"="2023") %>% 
     mutate(regiao = NA),
-  sf_regMSP
+  sf_regMSPpop
 )
+saveRDS(sf_munESP_regMSP,
+        file="./resultados/parciais/sf_munESP_regMSP_pop2022e2023.rds")
+
 # sf_munESP_regMSP %>% 
 #   ggplot() +
 #   geom_sf(aes(fill=pop2022))

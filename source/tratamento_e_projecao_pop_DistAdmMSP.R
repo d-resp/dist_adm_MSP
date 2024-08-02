@@ -48,6 +48,9 @@ df_fxet <- ddply(df_pop,c("dist_admMSP","fxet"),f_gam)
 write_csv(df_fxet,
           file="G:/CCD/CVE/RESPIRATORIAS/11_MAPAS/MSP_dist_adm/df_pop_fxet_1996-2024.csv")
 df_fxet <- read_csv("G:/CCD/CVE/RESPIRATORIAS/11_MAPAS/MSP_dist_adm/df_pop_fxet_1996-2024.csv")
+####
+# Faixa etárias do SRAG
+
 ######## aud ########
 df_total <- ddply(df_pop %>%
                     group_by(dist_admMSP,ano) %>%

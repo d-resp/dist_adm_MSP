@@ -261,8 +261,7 @@ ii) Reg. Met. de Campinas está divido em áreas, conforme os eixos de expansão
 # sf pop munESP e reg MSP
 sf_pop <- readRDS(file="./resultados/parciais/sf_munESP_regMSP_pop2022e2023.rds")
 # composição atual dos CIR
-cir<-readxl::read_excel("G:/CCD/CVE/RESPIRATORIAS/05_SRAG_SISTEMA_DE_ALERTA/00_dados_auxiliares/DRS_GVS_CEREST_RRAS_CIR_GVE_MUNICIPIO_MATRIZ.xls")
-cir<- cir |> dplyr::select(Cod6, RS_CIR, COD_CIR,MUNICIPIO...15)|>
+cir<-readxl::read_excel("G:/CCD/CVE/RESPIRATORIAS/05_SRAG_SISTEMA_DE_ALERTA/00_dados_auxiliares/DRS_GVS_CEREST_RRAS_CIR_GVE_MUNICIPIO_MATRIZ.xls") %>% dplyr::select(Cod6, RS_CIR, COD_CIR,MUNICIPIO...15) %>% 
   dplyr::rename(co_mun_res=Cod6,
                 cod_cir=COD_CIR,
                 nm_mn_resi=MUNICIPIO...15) %>% 

@@ -119,3 +119,47 @@ f_casewhen_fxet <- \(dffull, cname, v_fxet, cnameout){
   dffull[[cnameout]] <- factor(v_return,levels = unique(v_return))
   return(dffull)
 }
+f_interv_p_idade <- \(dff,patregex = " a ",id_cols=c("ano","dist_admMSP")){
+  v_cols <- names(dff) %>% grep(patregex,.)
+  v_cols_return <- setdiff(names(dff),names(dff)[v_cols])
+  df_return <- adply(v_cols,1,\(i){
+    f_FxEt_to_1y(v_i=i,df_f=dff,cols_to_return=v_cols_return)
+  },.id = NULL)
+  ddply(df_return,id_cols,\(i){
+    cbind( i[1,v_cols_return],t(colSums(i[,-c(1:3)],na.rm=TRUE)) )
+  })
+}
+#
+f_readcsv <- \(csvpath){
+  # leitura
+  year_data <- str_extract(readLines(csvpath, n = 3)[3], "\\d+")
+  df_return <- read_csv2(csvpath,skip = 3, locale(encoding = "Latin1"),)
+  # padronização
+  names(df_return) <- df_return[1,]
+  df_return <- df_return[-c(1,nrow(df_return)),]
+  df_return$`Dist Adm (DA)` <- iconv(df_return$`Dist Adm (DA)`,from="Latin1",to="")
+  names(df_return)[1] <- "dist_admMSP"
+  # return
+  df_return %>% 
+    mutate(ano = year_data) %>% 
+    relocate(ano) %>% 
+    filter(dist_admMSP!="Total") %>% 
+    select(-Total)
+}
+#
+f_adequa_fxet_pop <- \(dfwider,
+                       vfxet=c("0:9","10:18","19:60","60+"),
+                       idcols=c("ano","dist_admMSP")){
+  df_popidade <- f_interv_p_idade(dfwider,id_cols = idcols)
+  df_fxet <- df_popidade %>% 
+    rename_at(vars(everything()), ~ gsub(" e mais", "", .)) %>% 
+    pivot_longer(cols = -all_of(idcols),names_to="fxet",values_to="pop") %>% 
+    f_casewhen_fxet(cname="fxet",
+                    v_fxet = vfxet,
+                    cnameout = "fxet2") %>% 
+    group_by(across(all_of(c(idcols,"fxet2")))) %>% 
+    summarise(pop=sum(pop)) %>% 
+    rename(fxet=fxet2) %>% 
+    mutate(fxet=factor(fxet,levels=fxet))
+  return(df_fxet)
+}

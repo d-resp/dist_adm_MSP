@@ -82,3 +82,40 @@ f_gsub <- \(vstring){
     gsub("SAO LUIS DO PARAITINGA","SAO LUIZ DO PARAITINGA",.) %>% 
     gsub("MOJI MIRIM","MOGI MIRIM",.)
 }
+#
+f_FxEt_to_1y <- \(v_i, df_f, cols_to_return, v_patsplit = " a "){
+  # amplitude da faixa etária
+  v_range <- names(df_f)[v_i] %>% 
+    str_split_1(.,v_patsplit) %>% as.numeric()
+  # dados da faixa etária
+  v_data <- df_f[,v_i]/length(v_range[1]:v_range[2])
+  # while
+  df_return <- data.frame(v_data)
+  names(df_return) <- v_range[1]
+  v_start <- v_range[1]
+  while(v_start<v_range[2]){
+    v_start <- v_start + 1
+    df_while <- data.frame(v_data)
+    names(df_while) <- v_start
+    df_return <- cbind(df_return,df_while)
+  }
+  cbind(df_f[,cols_to_return],df_return)
+}
+f_casewhen_fxet <- \(dffull, cname, v_fxet, cnameout){
+  # objetos comuns
+  v_idademais <- v_fxet[str_detect(v_fxet,"\\+")]
+  v_outras_fxet <- v_fxet[!str_detect(v_fxet,"\\+")]
+  here <- environment()
+  # preparação dos objetos para o metaprogramming
+  v_base <- paste0(cname," %in% eval(parse(text=v_outras_fxet[i])) ~ v_outras_fxet[i]")
+  v_1 <- sapply(1:length(v_outras_fxet),\(x){
+    gsub("\\[i\\]",paste0("[",x,"]"),v_base)
+  }) %>% paste(.,collapse = ",")
+  v_2 <- paste0("TRUE ~ '",v_idademais,"'")
+  v_final <- paste0("case_when(",v_1,",",v_2,")")
+  assign(cname,value = dffull[[cname]],envir = here)
+  # execução das strings
+  v_return <- eval(expr = parse(text = v_final))
+  dffull[[cnameout]] <- factor(v_return,levels = unique(v_return))
+  return(dffull)
+}

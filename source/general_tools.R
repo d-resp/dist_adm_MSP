@@ -60,3 +60,25 @@ f_geocod_regMSP <- \(df_novoscasos,method_geocod="here",api_key=NULL){
   sf_joint_pp <- st_join(sf_pontos,sf_regMSP)
   return(sf_joint_pp)
 }
+#
+f_gsub <- \(vstring){
+  vstring %>% 
+    gsub("Ç",'C',.) %>% 
+    gsub("Â",'A',.) %>% 
+    gsub("É",'E',.) %>% 
+    gsub("Ê","E",.) %>% 
+    gsub("Á",'A',.) %>% 
+    gsub("Ã",'A',.) %>% 
+    gsub("Í",'I',.) %>% 
+    gsub("Ó",'O',.) %>% 
+    gsub("Õ","O",.) %>% 
+    gsub("Ú",'U',.) %>% 
+    gsub("Ô",'O',.) %>% 
+    gsub("-"," ",.) %>%
+    gsub("'"," ",.) %>%
+    gsub("CIDADE","CID",.) %>% 
+    gsub("JD","JARDIM",.) %>% 
+    gsub("FLORINIA","FLORINEA",.) %>% 
+    gsub("SAO LUIS DO PARAITINGA","SAO LUIZ DO PARAITINGA",.) %>% 
+    gsub("MOJI MIRIM","MOGI MIRIM",.)
+}

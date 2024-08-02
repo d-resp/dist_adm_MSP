@@ -11,6 +11,10 @@ library(sf)
 source("./source/general_tools.R")
 ```
 
+# Pós 01/08/2024
+
+Agora preciso fazer o trabalho para as faixa etárias usada na rotina de nowcasting da SRAG
+
 
 # 29/07/2024
 

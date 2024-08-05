@@ -11,6 +11,12 @@ library(sf)
 source("./source/general_tools.R")
 ```
 
+# 05/08/2023
+
+Auditoria de pop_fxetSRAG.R
+
+
+
 # 02/08/2024
 
 ```{r}

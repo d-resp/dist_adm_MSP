@@ -60,7 +60,8 @@ sf_municipios <- geobr::read_municipality(code_muni = "SP",
            NM_MUN=="BIRITIBA MIRIM" ~ "BIRITIBA-MIRIM",
            NM_MUN=="SAO LUIZ DO PARAITINGA" ~ "SAO LUIS DO PARAITINGA",
            NM_MUN=="FLORINEA" ~ "FLORINIA",
-           TRUE ~ NM_MUN))
+           TRUE ~ NM_MUN),
+         co_mun_res = str_sub(co_mun_res, end = -2))
 st_geometry(sf_municipios) <- "geometry"
 # sf com o poligonos das distritros administrativos do MSP
 sf_distMSP <- read_sf("./shp_files/LAYER_DISTRITO/DEINFO_DISTRITO.shp") %>% 
@@ -96,8 +97,26 @@ sf_munESP <- rbind(
   sf_MSP %>% mutate(co_mun_res="353050")
 )
 # 4 agregação por CIR2
-## 4.1 merge com a proposta de divisão dos CIR da Reg. Met. Campinas
-df_cir <- left_join(cir,df_divREGMETCAMP) %>% 
+## 4.1 merge da tabela de CIR com a nova proposta de CIR da Reg. Met. Camp.
+cir <- left_join(cir,
+                 sf_municipios %>% as.data.frame() %>% select(co_mun_res:NM_MUN)) %>% 
+  relocate(NM_MUN)
+df_cir_sMSP <- left_join(cir,df_divREGMETCAMP) %>% 
   mutate(RS_CIR=ifelse(grepl("CAMPINAS",RS_CIR),paste0("CAMP_",eixo),RS_CIR)) %>% 
   select(-eixo) %>% 
   filter(co_mun_res!="355030")
+## 4.2 merge de df_cir_sMSP
+sf_munESP[is.na(sf_munESP$RS_CIR),] <- inner_join(
+  x=sf_munESP[is.na(sf_munESP$RS_CIR),] %>% select(-RS_CIR),
+  y=df_cir %>% select(NM_MUN,RS_CIR),
+  by="NM_MUN"
+)
+## 4.3 fusão dos poligonos de acordo com o CIR2
+sf_munESP <- st_make_valid(sf_munESP)
+sf_CIR2 <- sf_munESP %>% 
+  mutate(geometry = st_buffer(geometry, 1e-9)) %>% 
+  group_by(RS_CIR) %>% 
+  summarise(geometry = st_union(st_buffer(geometry,45)),
+            NM_MUN = list(unique(NM_MUN))) %>% 
+  relocate(geometry,.after=last_col())
+saveRDS(sf_CIR2,file="./resultados/sf_CIR2.rds")

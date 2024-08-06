@@ -1,8 +1,9 @@
 library(sf)
 library(plyr)
 library(tidyverse)
-source("../source/general_tools.R")
+source("./source/general_tools.R")
 # objetos comuns
+v_fxet <- formals(f_adequa_fxet_pop)$vfxet
 v_anoref <- c(2022,2023)
 ##### bases #####
 # cir
@@ -41,7 +42,10 @@ df_popMSP <- inner_join(
 ) %>% 
   group_by(ano,fxet,regiao) %>% 
   summarise(pop=sum(pop)) %>% 
-  filter(ano%in%2022:2023)
+  filter(ano%in%2022:2023) %>% 
+  mutate(RS_CIR = paste0("MSP_",regiao),
+         MUN = "SAO PAULO") %>% 
+  select(-regiao)
 #
 #############################################################
 ### padronização da base pop dos outros municipios do ESP ###
@@ -53,7 +57,7 @@ df_popESP <- df_popESP %>%
   # adequação, transformação das classes abaixo de 1 ano em '0 ano'
   mutate(across(-POP,as.character),
          FX_ETARIA = ifelse(grepl("meses",FX_ETARIA),"0",FX_ETARIA)) %>% 
-  # soma das faixa etárias com 0 ano
+  # soma das faixa etárias com 0 ano e dos sexos binários
   group_by(MUN,ANO,FX_ETARIA) %>% 
   summarise(pop = sum(POP),.groups = "drop") %>% 
   # padronização para a função que quebra as faixa etárias
@@ -64,41 +68,18 @@ df_popESP <- df_popESP %>%
   pivot_wider(names_from=FX_ETARIA,values_from=pop)
 df_popESP_adeq <- f_adequa_fxet_pop(dfwider = df_popESP,idcols=c("MUN","ANO"))
 # união das bases no formato de sf_cir2
+## leitura dos CIR2
 sf_CIR2 <- readRDS(file="./resultados/sf_CIR2.rds")
-df_cir2 <- sf_CIR2 %>% unnest(NM_MUN) %>% as.data.frame %>% select(-geometry)
-
-
-sf_cir2_poptotal <- readRDS("./resultados/sf_cir2_poptotal.rds") 
-df_cir <- sf_cir2_poptotal %>% 
-  unnest(cols=c(NM_MUN,geometry)) %>% 
-  as.data.frame() %>% select(RS_CIR,NM_MUN)
-## MSP
-df_popMSP <- df_popMSP %>% 
-  mutate(RS_CIR=paste0("MSP_",regiao),
-         NM_MUN="SAO PAULO") %>% 
-  select(-regiao)
-## ESP
-df_popESP_adeq <- df_popESP_adeq %>% 
-  rename(NM_MUN=MUN,ano=ANO) %>% 
-  inner_join(.,df_cir)
-## merge 1
-df_pop <- 
-  rbind(df_popMSP,df_popESP_adeq) %>%
-  pivot_wider(values_from = "pop", names_from = "ano",names_prefix = "pop") %>% 
-  group_by(fxet,RS_CIR) %>% 
-  summarise(across(starts_with("pop"),sum))
-## merge 2
-sf_cir2_fxet <- inner_join(
-  sf_cir2_poptotal %>% select(RS_CIR,geometry),
-  df_pop
-) %>% 
-  relocate(geometry,.after=last_col())
+df_cir2 <- sf_CIR2 %>% unnest(NM_MUN) %>% as.data.frame %>% select(-geometry) %>% 
+  mutate(NM_MUN = f_gsub(NM_MUN))
+# merge populacao do estado por mun e mun por CIRs
+df_popCIR2 <- inner_join(
+  df_popESP_adeq,
+  df_cir2, by=c("MUN"="NM_MUN")
+  ) %>% group_by(ANO,fxet,RS_CIR) %>% 
+  summarise(pop = sum(pop)) %>% 
+  rbind(.,df_popMSP %>% rename(ANO=ano) %>% select(-MUN)) %>% 
+  mutate(fxet=factor(fxet,levels=c("0:9","10:18","19:60","60+"))) 
 #
-# auditoria
-teste <- inner_join(
-  x=sf_cir2_poptotal %>% as.data.frame() %>% select(RS_CIR,pop2022),
-  y=sf_cir2_fxet %>% as.data.frame() %>% select(RS_CIR,pop2022) %>% group_by(RS_CIR) %>% summarise(pop2022=sum(pop2022)),
-  by="RS_CIR"
-)
-teste %>% 
-  ggplot(aes(x=pop2022.x,y=pop2022.y)) + geom_point() + geom_abline(intercept = 0,slope=1)
+# salvamento
+saveRDS(df_popCIR2,file="./resultados/df_popCIR2_2022e2023.rds")

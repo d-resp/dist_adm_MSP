@@ -23,7 +23,8 @@ df_ref_regdist <- ddply(df_ref_regdist,"regiao",\(dfi){
                 gsub("JARDIM","JD",.))
 # proposta de fragmentação do CIR de campinas
 df_divREGMETCAMP <- read_csv2(file="./dados/proposta_div_RMCampinas.csv") %>% 
-  mutate(municipios = toupper(municipios),
+  mutate(municipios = toupper(municipios) %>% 
+           gsub("SANTA BARBARA D OESTE","SANTA BARBARA D'OESTE",.),
          eixo = factor(eixo,
                        levels=c(1:4,6,8),
                        labels=c(1:6))) %>% 
@@ -108,7 +109,7 @@ df_cir_sMSP <- left_join(cir,df_divREGMETCAMP) %>%
 ## 4.2 merge de df_cir_sMSP
 sf_munESP[is.na(sf_munESP$RS_CIR),] <- inner_join(
   x=sf_munESP[is.na(sf_munESP$RS_CIR),] %>% select(-RS_CIR),
-  y=df_cir %>% select(NM_MUN,RS_CIR),
+  y=df_cir_sMSP %>% select(NM_MUN,RS_CIR),
   by="NM_MUN"
 )
 ## 4.3 fusão dos poligonos de acordo com o CIR2

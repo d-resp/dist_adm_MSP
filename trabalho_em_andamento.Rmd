@@ -362,12 +362,13 @@ df_geocod <- df_srag %>% filter(anoepi%in%2022:2023) %>%
   rename(ID_MN_NOT = ID_MUNICIP,
          CNES = CO_UNI_NOT,
          NM_UNI_NOT=ID_UNIDADE) %>% 
-  rename_with(tolower)
+  rename_with(tolower) %>% 
+  filter(co_mun_not=="355030")
 df_geocodMSP <- df_geocod %>% filter(co_mun_not=="355030")
 v_cnes <- df_geocodMSP$cnes %>% unique
 # 2) esses cnes estão presentes na tabela de referência da Denise?
 df_refcnes <- read_csv("G:/CCD/CVE/RESPIRATORIAS/CNES_2022_2023/dados_CNES_2223_MSP.csv")
-df_refcnes <- df_refcnes %>% select(MUNICIPIO,CNES,LOGRADOURO:CEP) %>% 
+df_refcnes <- df_refcnes %>% select(MUNICIPIO,CNES,LOGRADOURO:CEP,`NOME FANTASIA`) %>% 
   rename_with(.,tolower)
 v_cnes_soltos <- setdiff(v_cnes,unique(df_refcnes$cnes))
 df_geocodMSP <- left_join(

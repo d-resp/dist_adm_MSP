@@ -11,7 +11,12 @@ library(sf)
 source("./source/general_tools.R")
 ```
 
-# 05/08/2023
+# 6/07/2024
+
+Organização dos trabalhos no projeto: 01_CIR2.R cria o shapefile; 02_pop_fxet_CIR2
+
+
+# 05/08/2024
 
 Auditoria de pop_fxetSRAG.R
 

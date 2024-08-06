@@ -42,20 +42,32 @@ df_popMSP <- inner_join(
   group_by(ano,fxet,regiao) %>% 
   summarise(pop=sum(pop)) %>% 
   filter(ano%in%2022:2023)
-# padronização da base pop dos outros municipios do ESP
+#
+#############################################################
+### padronização da base pop dos outros municipios do ESP ###
+#############################################################
 df_popESP <- readRDS("../../../11_MAPAS/pop_ESPserietemp_mun_fxet_sexo/pop_ESPserietemp_mun_fxet_sexo.rds")
 df_popESP <- df_popESP %>%
+  # seleção dos anos de estudo, remoção do MSP e da faixa etária total
   filter(FX_ETARIA!="Total",ANO%in%2022:2023,ID_MUN!=355030) %>% 
+  # adequação, transformação das classes abaixo de 1 ano em '0 ano'
   mutate(across(-POP,as.character),
          FX_ETARIA = ifelse(grepl("meses",FX_ETARIA),"0",FX_ETARIA)) %>% 
+  # soma das faixa etárias com 0 ano
   group_by(MUN,ANO,FX_ETARIA) %>% 
   summarise(pop = sum(POP),.groups = "drop") %>% 
+  # padronização para a função que quebra as faixa etárias
   mutate(FX_ETARIA = as.character(FX_ETARIA) %>% gsub(" anos","",.))
+# padronizaçaõ para a função de adequação das faixa etárias
 df_popESP <- df_popESP %>% 
   group_by(MUN,ANO) %>% 
   pivot_wider(names_from=FX_ETARIA,values_from=pop)
 df_popESP_adeq <- f_adequa_fxet_pop(dfwider = df_popESP,idcols=c("MUN","ANO"))
 # união das bases no formato de sf_cir2
+sf_CIR2 <- readRDS(file="./resultados/sf_CIR2.rds")
+df_cir2 <- sf_CIR2 %>% unnest(NM_MUN) %>% as.data.frame %>% select(-geometry)
+
+
 sf_cir2_poptotal <- readRDS("./resultados/sf_cir2_poptotal.rds") 
 df_cir <- sf_cir2_poptotal %>% 
   unnest(cols=c(NM_MUN,geometry)) %>% 

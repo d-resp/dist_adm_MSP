@@ -16,6 +16,33 @@ source("./source/general_tools.R")
 Organização dos trabalhos no projeto: 01_CIR2.R cria o shapefile; 02_pop_fxet_CIR2
 
 
+```{r}
+# pop total de MSP pela soma dos distritos
+df_poptotalMSP <- ddply(df_popMSP,"ano",\(i){
+  rbind(
+    i %>% group_by(ano,fxet) %>% summarise(pop=sum(pop)),
+    i %>% summarise(pop=sum(pop)) %>% mutate(fxet="total",ano=i$ano[1])
+  )
+})
+# pop segundo a info dos municipios
+df_popESP <- readRDS("../../../11_MAPAS/pop_ESPserietemp_mun_fxet_sexo/pop_ESPserietemp_mun_fxet_sexo.rds")
+df_poptotalMSP2 <- df_popESP %>% filter(ID_MUN=="355030",ANO%in%2022:2023,FX_ETARIA=="Total") %>% 
+  group_by(ANO) %>% 
+  summarise(POP = sum(POP)) %>% 
+  mutate(ANO = as.character(ANO))
+# plot
+df_plot <- inner_join(df_poptotalMSP %>% filter(fxet=="total"),
+                      df_poptotalMSP2,by=c("ano"="ANO"))
+all(df_plot$pop == df_plot$POP)
+```
+
+Em ambos os anos a população total obtida pela soma dos distritos e pelo disponível para todos os mun do ESP batem
+
+```{r}
+df_popESP %>% head
+```
+
+
 # 05/08/2024
 
 Auditoria de pop_fxetSRAG.R

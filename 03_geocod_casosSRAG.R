@@ -1,5 +1,9 @@
 #
 # referência de cnes e nome fantasia dos hospitais existentes entre 2022 e 2023
+
+
+
+
 df_refcnes <- read_csv("G:/CCD/CVE/RESPIRATORIAS/CNES_2022_2023/dados_CNES_2223_MSP.csv")
 df_refcnes <- df_refcnes %>% select(MUNICIPIO,CNES,LOGRADOURO:CEP,`NOME FANTASIA`) %>% 
   rename_with(.,tolower)

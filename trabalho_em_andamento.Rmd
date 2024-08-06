@@ -39,7 +39,7 @@ all(df_plot$pop == df_plot$POP)
 ESTUDO pacote microdatasus, como acessar o cnes?
 
 ```{r}
-install.packages("microdatasus")
+install.packages("microdatasus",dependencies = TRUE,verbose = TRUE)
 # install.packages("remotes")
 devtools::install_github("mllg/checkmate")
 install.packages("read.dbc", dependencies = TRUE, verbose = TRUE)

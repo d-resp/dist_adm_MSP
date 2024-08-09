@@ -11,6 +11,27 @@ library(sf)
 source("./source/general_tools.R")
 ```
 
+
+# 9/8/2024
+
+```{r}
+install.packages("remotes")
+install.packages("tidyverse")
+install.packages("data.table")
+install.packages("devtools")
+#
+library("remotes")
+library("tidyverse")
+library("data.table")
+#
+devtools::install_github("danicat/read.dbc", force = T)
+remotes::install_github("rfsaldanha/microdatasus", force = TRUE)
+
+```
+
+
+
+
 # 6/07/2024
 
 Organização dos trabalhos no projeto: 01_CIR2.R cria o shapefile; 02_pop_fxet_CIR2
@@ -400,6 +421,7 @@ Sys.setenv(HERE_API_KEY = "satAmDy2WRSF25bYxXicCaM8olNeM8GB5YA15wAwAUM")
 # df_cnes <- readRDS(file="./resultados/df_cnes.rds")
 # df_aud <- df_cnes %>% filter(if_any(matches("lat|long"),is.na)) %>% select(cnes,endereco,matches("lat|long"))
 #
+
 df_aud <- df_togeocod %>% select(cnes,endereco) %>% 
   geocode(address = endereco, method="here")
 df_cnes_latlong <- df_aud %>% select(cnes,endereco,lat,long) %>% as.data.frame()

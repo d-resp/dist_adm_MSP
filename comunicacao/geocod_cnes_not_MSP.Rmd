@@ -94,7 +94,6 @@ sf_regMSP <- sf_MSP %>%
   group_by(regiao) %>% 
   summarise(geometry = st_union(st_buffer(geometry, 0.0001))) %>% 
   sf::st_simplify(preserveTopology = TRUE)
-
 ```
 
 

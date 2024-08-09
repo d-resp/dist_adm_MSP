@@ -120,4 +120,6 @@ sf_CIR2 <- sf_munESP %>%
   summarise(geometry = st_union(st_buffer(geometry,45)),
             NM_MUN = list(unique(NM_MUN))) %>% 
   relocate(geometry,.after=last_col())
-saveRDS(sf_CIR2,file="./resultados/sf_CIR2.rds")
+sf_unnest <- sf_CIR2 %>% unnest(c(NM_MUN,geometry))
+write_sf(sf_unnest,"./resultados/sf_CIR2.shp")
+# saveRDS(sf_CIR2,file="./resultados/sf_CIR2.rds")
